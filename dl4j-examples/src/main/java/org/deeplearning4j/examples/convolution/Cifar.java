@@ -38,15 +38,6 @@ import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * train model by cifar
- * identification unkonw file
- *
- * @author wangfeng
- * @since June 7,2017
- */
-
-//@Slf4j
 public final class Cifar {
 
     private static final String DATA_PATH = FilenameUtils.concat(System.getProperty("user.dir"), "/");
