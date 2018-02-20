@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
 public class MnistClassifier {
 
   private static final Logger log = LoggerFactory.getLogger(MnistClassifier.class);
-  private static final String basePath = System.getProperty("java.io.tmpdir") + "/mnist";
+  private static final String basePath = "/tmp"/mnist";
   private static final String dataUrl = "http://github.com/myleott/mnist_png/raw/master/mnist_png.tar.gz";
 
   public static void main(String[] args) throws Exception {
