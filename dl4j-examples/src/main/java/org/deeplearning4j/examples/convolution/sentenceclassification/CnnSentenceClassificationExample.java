@@ -67,6 +67,13 @@ public class CnnSentenceClassificationExample {
 
         Nd4j.getMemoryManager().setAutoGcWindow(5000);
 
+        ConvolutionLayer cnn1 = new ConvolutionLayer.Builder()
+            .kernelSize(3, vectorSize)
+            .stride(1, vectorSize)
+            .nIn(1)
+            .nOut(cnnLayerFeatureMaps)
+            .build();
+
         ComputationGraphConfiguration config = new NeuralNetConfiguration.Builder()
             .trainingWorkspaceMode(WorkspaceMode.SINGLE).inferenceWorkspaceMode(WorkspaceMode.SINGLE)
             .weightInit(WeightInit.RELU)
@@ -77,12 +84,7 @@ public class CnnSentenceClassificationExample {
             .learningRate(0.01)
             .graphBuilder()
             .addInputs("input")
-            .addLayer("cnn3", new ConvolutionLayer.Builder()
-                .kernelSize(3,vectorSize)
-                .stride(1,vectorSize)
-                .nIn(1)
-                .nOut(cnnLayerFeatureMaps)
-                .build(), "input")
+            .addLayer("cnn3", cnn1, "input")
             .addLayer("cnn4", new ConvolutionLayer.Builder()
                 .kernelSize(4,vectorSize)
                 .stride(1,vectorSize)
