@@ -3,40 +3,31 @@ package org.deeplearning4j.examples.convolution;
 import org.apache.commons.io.FilenameUtils;
 import org.datavec.image.loader.CifarLoader;
 import org.datavec.image.loader.NativeImageLoader;
-import org.datavec.image.recordreader.ImageRecordReader;
-import org.datavec.image.transform.FlipImageTransform;
-import org.datavec.image.transform.ImageTransform;
-import org.datavec.image.transform.WarpImageTransform;
 import org.deeplearning4j.api.storage.StatsStorage;
-import org.deeplearning4j.datasets.iterator.MultipleEpochsIterator;
 import org.deeplearning4j.datasets.iterator.impl.CifarDataSetIterator;
 import org.deeplearning4j.eval.Evaluation;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.*;
 import org.deeplearning4j.nn.conf.inputs.InputType;
-import org.deeplearning4j.nn.conf.inputs.InvalidInputTypeException;
 import org.deeplearning4j.nn.conf.layers.*;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
-import org.deeplearning4j.optimize.api.IterationListener;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.deeplearning4j.ui.api.UIServer;
 import org.deeplearning4j.ui.stats.StatsListener;
 import org.deeplearning4j.ui.storage.InMemoryStatsStorage;
+import org.deeplearning4j.ui.weights.ConvolutionalIterationListener;
 import org.deeplearning4j.util.ModelSerializer;
 import org.deeplearning4j.util.StringUtils;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.buffer.DataBuffer;
-import org.nd4j.linalg.api.buffer.util.DataTypeUtil;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
-import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
-import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
-import org.nd4j.linalg.dataset.api.preprocessor.ImagePreProcessingScaler;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import javax.swing.*;
 import javax.swing.border.LineBorder;
 import javax.swing.border.TitledBorder;
@@ -45,9 +36,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
-import java.util.List;
-import java.util.concurrent.Callable;
+import java.util.Arrays;
 
 
 /**
@@ -86,22 +75,22 @@ public class Cifar {
         UIServer uiServer = UIServer.getInstance();
         StatsStorage statsStorage = new InMemoryStatsStorage();
         uiServer.attach(statsStorage);
-        model.setListeners(new StatsListener( statsStorage),new ScoreIterationListener(freIterations));
+        model.setListeners(new StatsListener(statsStorage), new ScoreIterationListener(freIterations), new ConvolutionalIterationListener(10));
 
         CifarDataSetIterator cifar = new CifarDataSetIterator(batchSize, numSamples,
-            new int[] {height, width, channels}, preProcessCifar, true);
+            new int[]{height, width, channels}, preProcessCifar, true);
         CifarDataSetIterator cifarEval = new CifarDataSetIterator(batchSize, 10000,
-            new int[] {height, width, channels}, preProcessCifar, false);
+            new int[]{height, width, channels}, preProcessCifar, false);
 
         labelStr = String.join(",", cifar.getLabels().toArray(new String[cifar.getLabels().size()]));
-        for ( int i = 0; i < epochs; i ++ ) {
+        for (int i = 0; i < epochs; i++) {
             System.out.println("Epoch=====================" + i);
             model.fit(cifar);
         }
 
         log.info("=====eval model========");
         Evaluation eval = new Evaluation(cifarEval.getLabels());
-        while(cifarEval.hasNext()) {
+        while (cifarEval.hasNext()) {
             DataSet testDS = cifarEval.next(batchSize);
             INDArray output = model.output(testDS.getFeatureMatrix());
             eval.eval(testDS.getLabels(), output);
@@ -128,38 +117,38 @@ public class Cifar {
             .list()
             .layer(0, new ConvolutionLayer.Builder(new int[]{4, 4}, new int[]{1, 1}, new int[]{0, 0}).name("cnn1").convolutionMode(ConvolutionMode.Same)
                 .nIn(3).nOut(64).weightInit(WeightInit.XAVIER_UNIFORM).activation(Activation.RELU)//.learningRateDecayPolicy(LearningRatePolicy.Step)
-                .learningRate(1e-2).biasInit(1e-2).biasLearningRate(1e-2*2).build())
-            .layer(1, new ConvolutionLayer.Builder(new int[]{4,4}, new int[] {1,1}, new int[] {0,0}).name("cnn2").convolutionMode(ConvolutionMode.Same)
+                .learningRate(1e-2).biasInit(1e-2).biasLearningRate(1e-2 * 2).build())
+            .layer(1, new ConvolutionLayer.Builder(new int[]{4, 4}, new int[]{1, 1}, new int[]{0, 0}).name("cnn2").convolutionMode(ConvolutionMode.Same)
                 .nOut(64).weightInit(WeightInit.XAVIER_UNIFORM).activation(Activation.RELU)
-                .learningRate(1e-2).biasInit(1e-2).biasLearningRate(1e-2*2).build())
-            .layer(2, new SubsamplingLayer.Builder(PoolingType.MAX, new int[]{2,2}).name("maxpool2").build())
+                .learningRate(1e-2).biasInit(1e-2).biasLearningRate(1e-2 * 2).build())
+            .layer(2, new SubsamplingLayer.Builder(PoolingType.MAX, new int[]{2, 2}).name("maxpool2").build())
 
-            .layer(3, new ConvolutionLayer.Builder(new int[]{4,4}, new int[] {1,1}, new int[] {0,0}).name("cnn3").convolutionMode(ConvolutionMode.Same)
+            .layer(3, new ConvolutionLayer.Builder(new int[]{4, 4}, new int[]{1, 1}, new int[]{0, 0}).name("cnn3").convolutionMode(ConvolutionMode.Same)
                 .nOut(96).weightInit(WeightInit.XAVIER_UNIFORM).activation(Activation.RELU)
-                .learningRate(1e-2).biasInit(1e-2).biasLearningRate(1e-2*2).build())
-            .layer(4, new ConvolutionLayer.Builder(new int[]{4,4}, new int[] {1,1}, new int[] {0,0}).name("cnn4").convolutionMode(ConvolutionMode.Same)
+                .learningRate(1e-2).biasInit(1e-2).biasLearningRate(1e-2 * 2).build())
+            .layer(4, new ConvolutionLayer.Builder(new int[]{4, 4}, new int[]{1, 1}, new int[]{0, 0}).name("cnn4").convolutionMode(ConvolutionMode.Same)
                 .nOut(96).weightInit(WeightInit.XAVIER_UNIFORM).activation(Activation.RELU)
-                .learningRate(1e-2).biasInit(1e-2).biasLearningRate(1e-2*2).build())
+                .learningRate(1e-2).biasInit(1e-2).biasLearningRate(1e-2 * 2).build())
 
-            .layer(5, new ConvolutionLayer.Builder(new int[]{3,3}, new int[] {1,1}, new int[] {0,0}).name("cnn5").convolutionMode(ConvolutionMode.Same)
+            .layer(5, new ConvolutionLayer.Builder(new int[]{3, 3}, new int[]{1, 1}, new int[]{0, 0}).name("cnn5").convolutionMode(ConvolutionMode.Same)
                 .nOut(128).weightInit(WeightInit.XAVIER_UNIFORM).activation(Activation.RELU)
-                .learningRate(1e-2).biasInit(1e-2).biasLearningRate(1e-2*2).build())
-            .layer(6, new ConvolutionLayer.Builder(new int[]{3,3}, new int[] {1,1}, new int[] {0,0}).name("cnn6").convolutionMode(ConvolutionMode.Same)
+                .learningRate(1e-2).biasInit(1e-2).biasLearningRate(1e-2 * 2).build())
+            .layer(6, new ConvolutionLayer.Builder(new int[]{3, 3}, new int[]{1, 1}, new int[]{0, 0}).name("cnn6").convolutionMode(ConvolutionMode.Same)
                 .nOut(128).weightInit(WeightInit.XAVIER_UNIFORM).activation(Activation.RELU)
-                .learningRate(1e-2).biasInit(1e-2).biasLearningRate(1e-2*2).build())
+                .learningRate(1e-2).biasInit(1e-2).biasLearningRate(1e-2 * 2).build())
 
-            .layer(7, new ConvolutionLayer.Builder(new int[]{2,2}, new int[] {1,1}, new int[] {0,0}).name("cnn7").convolutionMode(ConvolutionMode.Same)
+            .layer(7, new ConvolutionLayer.Builder(new int[]{2, 2}, new int[]{1, 1}, new int[]{0, 0}).name("cnn7").convolutionMode(ConvolutionMode.Same)
                 .nOut(256).weightInit(WeightInit.XAVIER_UNIFORM).activation(Activation.RELU)
-                .learningRate(1e-2).biasInit(1e-2).biasLearningRate(1e-2*2).build())
-            .layer(8, new ConvolutionLayer.Builder(new int[]{2,2}, new int[] {1,1}, new int[] {0,0}).name("cnn8").convolutionMode(ConvolutionMode.Same)
+                .learningRate(1e-2).biasInit(1e-2).biasLearningRate(1e-2 * 2).build())
+            .layer(8, new ConvolutionLayer.Builder(new int[]{2, 2}, new int[]{1, 1}, new int[]{0, 0}).name("cnn8").convolutionMode(ConvolutionMode.Same)
                 .nOut(256).weightInit(WeightInit.XAVIER_UNIFORM).activation(Activation.RELU)
-                .learningRate(1e-2).biasInit(1e-2).biasLearningRate(1e-2*2).build())
-            .layer(9, new SubsamplingLayer.Builder(PoolingType.MAX, new int[]{2,2}).name("maxpool8").build())
+                .learningRate(1e-2).biasInit(1e-2).biasLearningRate(1e-2 * 2).build())
+            .layer(9, new SubsamplingLayer.Builder(PoolingType.MAX, new int[]{2, 2}).name("maxpool8").build())
 
-            .layer(10, new DenseLayer.Builder().name("ffn1").nOut(1024).learningRate(1e-3).biasInit(1e-3).biasLearningRate(1e-3*2).build())
-            .layer(11,new DropoutLayer.Builder().name("dropout1").dropOut(0.2).build())
-            .layer(12, new DenseLayer.Builder().name("ffn2").nOut(1024).learningRate(1e-2).biasInit(1e-2).biasLearningRate(1e-2*2).build())
-            .layer(13,new DropoutLayer.Builder().name("dropout2").dropOut(0.2).build())
+            .layer(10, new DenseLayer.Builder().name("ffn1").nOut(1024).learningRate(1e-3).biasInit(1e-3).biasLearningRate(1e-3 * 2).build())
+            .layer(11, new DropoutLayer.Builder().name("dropout1").dropOut(0.2).build())
+            .layer(12, new DenseLayer.Builder().name("ffn2").nOut(1024).learningRate(1e-2).biasInit(1e-2).biasLearningRate(1e-2 * 2).build())
+            .layer(13, new DropoutLayer.Builder().name("dropout2").dropOut(0.2).build())
             .layer(14, new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
                 .name("output")
                 .nOut(numLabels)
@@ -180,12 +169,13 @@ public class Cifar {
         File locationModelFile = new File(DATA_PATH + fileName);
         boolean saveUpdater = false;
         try {
-            ModelSerializer.writeModel(model,locationModelFile,saveUpdater);
+            ModelSerializer.writeModel(model, locationModelFile, saveUpdater);
         } catch (Exception e) {
-            log.error("Saving model is not success !",e);
+            log.error("Saving model is not success !", e);
         }
         return model;
     }
+
     public void testModelByUnkownImage(MultiLayerNetwork model) {
         JFileChooser fc = new JFileChooser();
         int ret = fc.showOpenDialog(null);
@@ -194,70 +184,70 @@ public class Cifar {
             File file = fc.getSelectedFile();
             filename = file.getAbsolutePath();
         }
-        AnalysisUnkownImage ui = new AnalysisUnkownImage(filename,model);
+        AnalysisUnkownImage ui = new AnalysisUnkownImage(filename, model);
         ui.showGUI();
     }
 
 
-
-    private class AnalysisUnkownImage extends JFrame{
-        public static final int CLASS_LOADER_CHAR = 0X12FFAADE ;
+    private class AnalysisUnkownImage extends JFrame {
+        public static final int CLASS_LOADER_CHAR = 0X12FFAADE;
 
         private JTextArea jta;
         MultiLayerNetwork model;
-        public AnalysisUnkownImage(String filename, MultiLayerNetwork model){
+
+        public AnalysisUnkownImage(String filename, MultiLayerNetwork model) {
             this.model = model;
-            JLabel label1=new JLabel("Directory/File(Plz fill in path");
-            JLabel label3=new JLabel("  skymind.ai");
-            JLabel label4=new JLabel("welcome to here  ");
-            label3.setBackground(new Color(87,105,227));
-            label4.setBackground(new Color(87,105,227));
-            label3.setForeground(new Color(28,11,185));
-            label4.setForeground(new Color(239,16,228));
+            JLabel label1 = new JLabel("Directory/File(Plz fill in path");
+            JLabel label3 = new JLabel("  skymind.ai");
+            JLabel label4 = new JLabel("welcome to here  ");
+            label3.setBackground(new Color(87, 105, 227));
+            label4.setBackground(new Color(87, 105, 227));
+            label3.setForeground(new Color(28, 11, 185));
+            label4.setForeground(new Color(239, 16, 228));
             JButton jbt = new JButton("The identification of unknown and show(Click Here)");
             JTextField jtf = new JTextField(380);
             jtf.setText(filename);
-            jta = new JTextArea(15,80);
+            jta = new JTextArea(15, 80);
             jta.setLineWrap(true);
             jta.setWrapStyleWord(true);
             JScrollPane jsp = new JScrollPane(jta);
-            LineBorder lb = new LineBorder(Color.red,1);
-            TitledBorder tb = new TitledBorder(new TitledBorder(""), " Identification result",0, 5, new Font("Serif",Font.BOLD,12), Color.BLUE);
+            LineBorder lb = new LineBorder(Color.red, 1);
+            TitledBorder tb = new TitledBorder(new TitledBorder(""), " Identification result", 0, 5, new Font("Serif", Font.BOLD, 12), Color.BLUE);
 
             JPanel panel = new JPanel();
             JPanel panel1 = new JPanel();
             JPanel panel2 = new JPanel();
-            JPanel panel3 =new JPanel();
+            JPanel panel3 = new JPanel();
             JPanel panel4 = new JPanel();
             JPanel panel5 = new JPanel();
             JPanel panel7 = new JPanel();
 
-            panel5.setLayout(new BorderLayout(5,5));
-            panel5.add(label1,BorderLayout.WEST);
-            panel5.add(jtf,BorderLayout.CENTER);
-            panel7.setLayout(new GridLayout(1,2,5,5));
+            panel5.setLayout(new BorderLayout(5, 5));
+            panel5.add(label1, BorderLayout.WEST);
+            panel5.add(jtf, BorderLayout.CENTER);
+            panel7.setLayout(new GridLayout(1, 2, 5, 5));
             panel7.add(panel5);
-            panel1.setLayout(new BorderLayout(5,5));
+            panel1.setLayout(new BorderLayout(5, 5));
             panel1.setBorder(lb);
-            panel1.add(panel7,BorderLayout.CENTER);
+            panel1.add(panel7, BorderLayout.CENTER);
             jbt.setForeground(Color.BLUE);
             jbt.setBackground(Color.GREEN);
-            panel2.setLayout(new BorderLayout(5,5));
-            panel2.add(label3,BorderLayout.WEST);
-            panel2.add(jbt,BorderLayout.CENTER);
+            panel2.setLayout(new BorderLayout(5, 5));
+            panel2.add(label3, BorderLayout.WEST);
+            panel2.add(jbt, BorderLayout.CENTER);
             panel2.add(label4, BorderLayout.EAST);
-            panel3.setLayout(new BorderLayout(1,1));
-            panel3.add(jsp,BorderLayout.CENTER);
+            panel3.setLayout(new BorderLayout(1, 1));
+            panel3.add(jsp, BorderLayout.CENTER);
             panel3.setBorder(tb);
-            panel4.setLayout(new BorderLayout(5,5));
-            panel4.add(panel2,BorderLayout.NORTH);
-            panel4.add(panel3,BorderLayout.CENTER);
+            panel4.setLayout(new BorderLayout(5, 5));
+            panel4.add(panel2, BorderLayout.NORTH);
+            panel4.add(panel3, BorderLayout.CENTER);
 
-            panel.setLayout(new BorderLayout(5,5));
-            panel.add(panel1,BorderLayout.NORTH);
-            panel.add(panel4,BorderLayout.CENTER);
+            panel.setLayout(new BorderLayout(5, 5));
+            panel.add(panel1, BorderLayout.NORTH);
+            panel.add(panel4, BorderLayout.CENTER);
             //register listener
-            jbt.addActionListener( new ActionListener() {
+            jbt.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent ae) {
                     String fileAbsolutePath = jtf.getText();
                     jta.setText("labels->->->" + labelStr);
@@ -265,11 +255,11 @@ public class Cifar {
                     double numz = 0.0;
                     boolean judge = true;
                     File file = new File(fileAbsolutePath);
-                    File [] files = new File[1];
+                    File[] files = new File[1];
                     if (file.exists()) {
                         if (file.isDirectory()) {
                             files = file.listFiles();
-                        }else {
+                        } else {
                             files[0] = file;
                         }
                         analysisFileName(files);
@@ -279,16 +269,17 @@ public class Cifar {
             });
             add(panel);
         }
+
         public void analysisFileName(File[] files) {
-            for (int i = 0; i < files.length; i ++) {
+            for (int i = 0; i < files.length; i++) {
                 if (files[i].isDirectory()) {
                     analysisFileName(files[i].listFiles());
                 } else {
                     //the suffix of the file
                     String suffix = files[i].getName();
-                    suffix = suffix.substring(suffix.lastIndexOf(".")+1);
-                    String  formatAllows = StringUtils.arrayToString(NativeImageLoader.ALLOWED_FORMATS);
-                    if(formatAllows.contains(suffix)){
+                    suffix = suffix.substring(suffix.lastIndexOf(".") + 1);
+                    String formatAllows = StringUtils.arrayToString(NativeImageLoader.ALLOWED_FORMATS);
+                    if (formatAllows.contains(suffix)) {
                         File file = files[i];
                         // Use NativeImageLoader to convert to numerical matrix
                         NativeImageLoader loader = new NativeImageLoader(height, width, 3);
@@ -297,7 +288,7 @@ public class Cifar {
                         try {
                             image = loader.asMatrix(file);
                         } catch (Exception e) {
-                            log.error("the loader.asMatrix have any abnormal",e);
+                            log.error("the loader.asMatrix have any abnormal", e);
                         }
                         if (image == null) {
                             return;
@@ -314,11 +305,11 @@ public class Cifar {
 
                         String modelResult = output.toString();
 
-                        int [] predict = model.predict(image);
+                        int[] predict = model.predict(image);
                         modelResult += "===" + Arrays.toString(predict);
                         jta.append("the file chosen:");
                         jta.append("\n");
-                        jta.append( files[i].getAbsolutePath());
+                        jta.append(files[i].getAbsolutePath());
                         jta.append("\n");
                         jta.append("the  identification result :" + modelResult);
                         jta.append("\n");
@@ -329,8 +320,9 @@ public class Cifar {
                 }
             }
         }
+
         public void showGUI() {
-            setSize(560,500);
+            setSize(560, 500);
             setLocationRelativeTo(null);
             setBackground(Color.green);
             setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
