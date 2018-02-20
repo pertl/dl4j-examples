@@ -75,7 +75,7 @@ public class Cifar {
         UIServer uiServer = UIServer.getInstance();
         StatsStorage statsStorage = new InMemoryStatsStorage();
         uiServer.attach(statsStorage);
-        model.setListeners(new StatsListener(statsStorage), new ScoreIterationListener(freIterations), new ConvolutionalIterationListener(10));
+        model.setListeners(new StatsListener(statsStorage), new ScoreIterationListener(freIterations));
 
         CifarDataSetIterator cifar = new CifarDataSetIterator(batchSize, numSamples,
             new int[]{height, width, channels}, preProcessCifar, true);
