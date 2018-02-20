@@ -90,7 +90,13 @@
         </dependency>
         <dependency>
             <groupId>org.nd4j</groupId>
-            <artifactId>${nd4j.backend}</artifactId>
+            <artifactId>nd4j-native-platform</artifactId>
+            <version>${nd4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.nd4j</groupId>
+            <artifactId>nd4j-cuda-8.0-platform</artifactId>
+            <version>${nd4j.version}</version>
         </dependency>
         <!-- datavec-data-codec: used only in video example for loading video data -->
         <dependency>
