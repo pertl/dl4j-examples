@@ -151,7 +151,7 @@ public class MnistClassifier {
         net.init();
         net.setListeners(new ScoreIterationListener(10));
         net.setListeners(new StatsListener(storage));
-        net.setListeners(new ConvolutionalIterationListener(2000));
+        net.setListeners(new ConvolutionalIterationListener(1));
         log.debug("Total num of params: {}", net.numParams());
 
         // evaluation while training (the score should go down)
