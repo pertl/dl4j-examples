@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
 public class MnistClassifier {
 
   private static final Logger log = LoggerFactory.getLogger(MnistClassifier.class);
-  private static final String basePath = "/tmp"/mnist";
+  private static final String basePath = "/tmp/mnist";
   private static final String dataUrl = "http://github.com/myleott/mnist_png/raw/master/mnist_png.tar.gz";
 
   public static void main(String[] args) throws Exception {
@@ -97,7 +97,13 @@ public class MnistClassifier {
     lrSchedule.put(800, 0.0060);
     lrSchedule.put(1000, 0.001);
 
-    MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
+      ConvolutionLayer cnn1 = new ConvolutionLayer.Builder(5, 5)
+          .nIn(channels)
+          .stride(1, 1)
+          .nOut(20)
+          .activation(Activation.IDENTITY)
+          .build();
+      MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
         .seed(seed)
         .iterations(iterations)
         .regularization(true).l2(0.0005)
@@ -108,12 +114,7 @@ public class MnistClassifier {
         .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
         .updater(Updater.NESTEROVS)
         .list()
-        .layer(0, new ConvolutionLayer.Builder(5, 5)
-            .nIn(channels)
-            .stride(1, 1)
-            .nOut(20)
-            .activation(Activation.IDENTITY)
-            .build())
+        .layer(0, cnn1)
         .layer(1, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
             .kernelSize(2, 2)
             .stride(2, 2)
